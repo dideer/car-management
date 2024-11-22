@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Management System - DataTables</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            padding-top: 56px; /* Adjust based on navbar height */
+        }
+        .sidebar {
+            background-color: #212529;
+            color: #fff;
+            height: 100vh;
+            padding-top: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            transform: translateX(0); /* Sidebar is visible by default */
+            overflow-y: auto;
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%); /* Hide sidebar */
+        }
+        .sidebar.visible {
+            transform: translateX(0); /* Show sidebar */
+        }
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            color: #fff;
+            background-color: #343a40;
+        }
+        .main-content {
+            margin-left: 250px; /* Sidebar width */
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            height: 300px;
+        }
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 250px; /* Sidebar width */
+            width: calc(100% - 250px);
+            z-index: 1020;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            transition: left 0.3s ease, width 0.3s ease;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .navbar-brand-full {
+            display: inline;
+        }
+        .navbar-brand-short {
+            display: none;
+        }
+        .navbar-nav {
+            flex-direction: row;
+            align-items: center;
+        }
+        .navbar-nav .nav-item {
+            margin-left: auto;
+        }
+        .navbar .toggle-icon {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                transform: translateX(-100%); /* Hide sidebar initially */
+            }
+            .sidebar.visible {
+                transform: translateX(0); /* Show sidebar */
+            }
+            .main-content {
+                margin-left: 0; /* Adjust content area */
+            }
+            .navbar {
+                width: 100%; /* Full width on small screens */
+                left: 0;
+            }
+            .navbar .toggle-icon {
+                display: inline-block;
+            }
+            .navbar .navbar-brand-full {
+                display: none;
+            }
+            .navbar .navbar-brand-short {
+                display: inline;
+            }
+        }
+        @media (max-width: 576px) {
+            .dropdown-menu {
+                display: none; /* Hide dropdown menu items */
+            }
+            .dropdown-icon {
+                display: inline-block;
+            }
+        }
+        footer {
+            background-color: #f8f9fa; /* Light background */
+            color: #212529; /* Dark text */
+        }
+        footer a {
+            color: #212529;
+            text-decoration: none;
+        }
+        footer a:hover {
+            color: #007bff; /* Change color on hover */
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <!-- Include Sidebar Fragment -->
+    <th:block th:include="manage/fragments/sidebar"></th:block>
+
+    <!-- Main content -->
+    <div id="content" class="main-content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand navbar-brand-full" href="#">Car Management System</a>
+                <a class="navbar-brand navbar-brand-short" href="#">CM-SYSTEM</a>
+                <button id="sidebarToggle" class="btn btn-outline-secondary d-lg-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="d-flex ms-auto">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+
+                            <span class="d-none d-sm-inline" th:text="${user.username}"></span>
+                            <i class="fas fa-user d-sm-none"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li><a class="dropdown-item" href="#">Settings</a></li>
+                            <li><a class="dropdown-item" th:href="@{/logout}">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid">
+            <h1 class="mt-4">Manager Dashboard</h1>
+<!--            <th:block th:if="${session.msg}">-->
+<!--                <p class="text-center fs-4 text-success">[[${session.msg}]]</p>-->
+<!--                <th:block th:text="${#session.removeAttribute('msg')}"></th:block>-->
+<!--            </th:block>-->
+
+            <!-- Add Employee Button -->
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="card-title">Cars Data</h5>
+                <a href="#" class="btn btn-success" title="Add Car" data-bs-toggle="modal" data-bs-target="#addCarModal">
+                    <i class="fas fa-plus-circle"></i> Add Car
+                </a>
+            </div>
+
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <!-- Your DataTable -->
+                    <table id="carTable" class="display">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Car Image</th>
+                            <th>Car Brand</th>
+                            <th>Car Model</th>
+                            <th>Made Year</th>
+                            <th>Price</th>
+                            <th>Current Price</th>
+                            <th>Quantity</th>
+                            <th>Total Price</th>
+
+                            <th>Option</th>
+
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="carss,stat:${cars}">
+                            <td th:text="${stat.index + 1}"></td>
+                            <td><img alt="" th:src="@{/img/{carImage}(carImage=${carss.carImage})}" style="width: 50px; height: 50px;"></td>
+                            <td th:text="${carss.brand}"></td>
+                            <td th:text="${carss.model}"></td>
+                            <td th:text="${carss.year}"></td>
+                            <td th:text="${carss.price}"></td>
+                            <td class="current-price"></td>
+                            <td th:text="${carss.quantity}"></td>
+                            <td th:text="${carss.totalPrice}"></td>
+
+                            <td>
+                                <!-- View Icon -->
+                                <a href="#"  class="btn btn-primary btn-sm btn-view" title="View"
+                                        th:data-id="${carss.carId}"
+                                        th:data-category="${carss.category.categoryID}"
+                                        th:data-brand="${carss.brand}"
+                                        th:data-model="${carss.model}"
+                                        th:data-carimage="${carss.carImage}"
+                                        th:data-type="${carss.type}"
+                                        th:data-year="${carss.year}"
+                                        th:data-price="${carss.price}"
+                                        th:data-quantity="${carss.quantity}"
+                                        th:data-totalprice="${carss.totalPrice}"
+                                        th:data-user="${carss.user.userId}"
+                                        th:data-status="${carss.status}"
+
+                                >
+                                    <i class="fa fa-eye"></i>
+                                </a>
+                                <!-- Edit Icon -->
+                                <a href="#"
+                                   class="btn btn-warning btn-sm btn-edit"
+                                   title="Edit"
+                                   th:data-id="${carss.carId}"
+                                   th:data-category="${carss.category.categoryID}"
+                                   th:data-brand="${carss.brand}"
+                                   th:data-model="${carss.model}"
+                                   th:data-carimage="${carss.carImage}"
+                                   th:data-type="${carss.type}"
+                                   th:data-year="${carss.year}"
+                                   th:data-price="${carss.price}"
+                                   th:data-quantity="${carss.quantity}"
+                                   th:data-totalprice="${carss.totalPrice}"
+                                   th:data-user1="${carss.user.userId}"
+                                   th:data-status="${carss.status}">
+                                    <i class="fa fa-pencil"></i>
+                                </a>
+                                <!-- Delete Icon -->
+                                <a href="#" th:href="@{/cars/delete/{id}(id=${carss.carId})}" title="Delete" onclick="return confirm('Are you sure you want to delete this car?');">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+
+
+
+                        <!-- Additional rows as needed -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Add more stat cards here -->
+        </div>
+
+
+
+        <!-- Add Car Modal -->
+        <div class="modal fade" id="addCarModal" tabindex="-1" aria-labelledby="addCarModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="addCarModalLabel">Add Car</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form th:action="@{/manage/car/save-car}" method="post" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Category" class="form-label">Category</label>
+                                        <select class="form-control" id="Category" name="category" required>
+                                            <!-- Assuming 'categories' is a model attribute with a list of Category objects -->
+                                            <option th:each="categorys : ${category}"
+                                                    th:value="${categorys.categoryID}"
+                                                    th:text="${categorys.categoryName}">
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Brand" class="form-label">Manage Name</label>
+                                        <input type="text" class="form-control" id="manage" name="manage" th:value="${user.username}" placeholder="Enter Manage" readonly>
+                                        <input type="hidden" th:value="${userId.userId}" name="user">
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Brand" class="form-label">Brand</label>
+                                        <select class="form-control" id="Brand" name="brand" onchange="toggleOtherBrandInput()" required>
+                                            <option value="" disabled selected>Select a brand</option>
+                                            <option value="Toyota">Toyota</option>
+                                            <option value="Honda">Honda</option>
+                                            <option value="Ford">Ford</option>
+                                            <option value="BMW">BMW</option>
+                                            <option value="Mercedes">Mercedes</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3" id="otherBrandDiv" style="display: none;">
+                                        <label for="otherBrand" class="form-label">Other Brand</label>
+                                        <input type="text" class="form-control" id="otherBrand" name="brand" placeholder="Enter other brand">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Model" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="Model" name="model" placeholder="Enter model" required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="CarImage" class="form-label">Car Image</label>
+                                        <input type="file" class="form-control" id="CarImage" name="carImage" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Type" class="form-label">Type</label>
+                                        <select class="form-control" id="Type" name="type" required>
+                                            <option value="automatic">Automatic</option>
+                                            <option value="manual">Manual</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Year" class="form-label">Year</label>
+                                        <input type="number" class="form-control" id="Year" name="year" placeholder="Enter year" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Price" class="form-label">Price</label>
+                                        <input type="number" step="0.01" class="form-control" id="Price" name="price" placeholder="Enter price" required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Quantity" class="form-label">Quantity</label>
+                                        <input type="number" class="form-control" id="Quantity" name="quantity" placeholder="Enter quantity" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="TotalPrice" class="form-label">Total Price</label>
+                                        <input type="number" step="0.01" class="form-control" id="TotalPrice" name="totalPrice" placeholder="Enter total price" readonly required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <input type="hidden" class="form-control" id="Status" name="status" value="Active" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+                <!-- View Cars Modal --><!-- View Car Modal -->
+<!--        <div class="modal fade" id="viewCarModal" tabindex="-1" aria-labelledby="viewCarModalLabel" aria-hidden="true">-->
+<!--            <div class="modal-dialog modal-dialog-centered modal-lg">-->
+<!--                <div class="modal-content">-->
+<!--                    <div class="modal-header bg-warning text-white">-->
+<!--                        <h5 class="modal-title" id="viewCarModalLabel">View Car</h5>-->
+<!--                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
+<!--                    </div>-->
+<!--                    <div class="modal-body">-->
+<!--                        <form id="viewCarForm" th:action="@{/manage/category/update-category}" method="post">-->
+<!--                            &lt;!&ndash; Hidden input to identify the employee being edited &ndash;&gt;-->
+<!--                            <input type="hidden" id="carId" name="carId">-->
+
+<!--                            <div class="mb-3">-->
+<!--                                <div class="row">-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Category" class="form-label">Category</label>-->
+
+<!--                                    </div>-->
+<!--                                </div>-->
+
+<!--                                <div class="row">-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Brand" class="form-label">Brand</label>-->
+<!--                                        <input type="text" class="form-control" id="viewBrand" name="brand" placeholder="Enter brand" required>-->
+<!--                                    </div>-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Model" class="form-label">Model</label>-->
+<!--                                        <input type="text" class="form-control" id="viewModel" name="model" placeholder="Enter model" required>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+<!--                                <div class="row">-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="CarImage" class="form-label">Car Image</label>-->
+<!--                                        <input type="file" class="form-control" id="viewCarImage" name="carImage" required>-->
+<!--                                    </div>-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Type" class="form-label">Type</label>-->
+<!--                                        <select class="form-control" id="viewType" name="type" required>-->
+<!--                                            <option value="automatic">Automatic</option>-->
+<!--                                            <option value="manual">Manual</option>-->
+<!--                                        </select>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+<!--                                <div class="row">-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Year" class="form-label">Year</label>-->
+<!--                                        <input type="number" class="form-control" id="viewYear" name="year" placeholder="Enter year" required>-->
+<!--                                    </div>-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Price" class="form-label">Price</label>-->
+<!--                                        <input type="number" step="0.01" class="form-control" id="viewPrice" name="price" placeholder="Enter price" required>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+<!--                                <div class="row">-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="Quantity" class="form-label">Quantity</label>-->
+<!--                                        <input type="number" class="form-control" id="viewQuantity" name="quantity" placeholder="Enter quantity" required>-->
+<!--                                    </div>-->
+<!--                                    <div class="col-md-6 mb-3">-->
+<!--                                        <label for="TotalPrice" class="form-label">Total Price</label>-->
+<!--                                        <input type="number" step="0.01" class="form-control" id="viewTotalPrice" name="totalPrice" placeholder="Enter total price" readonly required>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+
+
+<!--                                <div class="d-flex justify-content-end">-->
+<!--                                <button type="submit" class="btn btn-warning">Update</button>-->
+<!--                            </div>-->
+<!--                        </form>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+        <!-- Update Car Modal -->
+        <div class="modal fade" id="updateCarModal" tabindex="-1" aria-labelledby="updateCarModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title" id="updateCarModalLabel">Update Car</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form th:action="@{/manage/car/update-car}" method="post" enctype="multipart/form-data">
+                            <input type="hidden" id="updateCarId" name="carId">
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateCategory" class="form-label">Category</label>
+                                        <select class="form-control" id="updateCategory" name="category" required>
+                                            <option th:each="categorys : ${category}"
+                                                    th:value="${categorys.categoryID}"
+                                                    th:text="${categorys.categoryName}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateBrand" class="form-label">Brand</label>
+                                        <input type="text" class="form-control" id="updateBrand" name="brand" placeholder="Enter brand" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateModel" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="updateModel" name="model" placeholder="Enter model" required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateCarImage" class="form-label">Car Image</label>
+                                        <input type="file" class="form-control" id="updateCarImage" name="carImage">
+                                        <!-- Assuming you want to show the current image -->
+                                        <img id="currentCarImage" src="" alt="Current Car Image" style="width: 50px; height: 50px; margin-top: 10px;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateType" class="form-label">Type</label>
+                                        <select class="form-control" id="updateType" name="type" required>
+                                            <option value="automatic">Automatic</option>
+                                            <option value="manual">Manual</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="updateModel" class="form-label">Model</label>
+                                    <input type="text" class="form-control" id="updateUser" name="user" placeholder="Enter model" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateYear" class="form-label">Year</label>
+                                        <input type="number" class="form-control" id="updateYear" name="year" placeholder="Enter year" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updatePrice" class="form-label">Price</label>
+                                        <input type="number" step="0.01" class="form-control" id="updatePrice" name="price" placeholder="Enter price" required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateQuantity" class="form-label">Quantity</label>
+                                        <input type="number" class="form-control" id="updateQuantity" name="quantity" placeholder="Enter quantity" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="updateTotalPrice" class="form-label">Total Price</label>
+                                        <input type="number" step="0.01" class="form-control" id="updateTotalPrice" name="totalPrice" placeholder="Enter total price" readonly required>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <input type="hidden" class="form-control" id="updateStatus" name="status" value="Active" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-warning">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- View Car Modal -->
+        <div id="viewCarModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="viewCarModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="viewCarModalLabel">View Car Details</h5>
+                        <button type="button" class="btn-class" data-bs-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <!-- Car Image -->
+                                <img id="viewCarImage" src="" alt="Car Image" class="img-fluid" style="max-height: 300px; object-fit: cover;">
+                            </div>
+                            <div class="col-md-6">
+                                <!-- Car Details -->
+                                <p><strong>Car ID:</strong> <span id="viewCarId"></span></p>
+                                <p><strong>Brand:</strong> <span id="viewBrand"></span></p>
+                                <p><strong>Model:</strong> <span id="viewModel"></span></p>
+                                <p><strong>Year:</strong> <span id="viewYear"></span></p>
+                                <p><strong>Price:</strong> <span id="viewPrice"></span></p>
+                                <p><strong>Quantity:</strong> <span id="viewQuantity"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- JavaScript Libraries -->
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                $('#carTable').DataTable();
+
+                document.querySelectorAll('.btn-edit').forEach(button => {
+                    button.addEventListener('click', function () {
+                        const carId = this.dataset.id;
+                        // Load data into the modal
+                        document.getElementById('updateCarId').value = carId;
+                        document.getElementById('updateCategory').value = this.dataset.category;
+                        document.getElementById('updateBrand').value = this.dataset.brand;
+                        document.getElementById('updateModel').value = this.dataset.model;
+                        document.getElementById('currentCarImage').src = '/img/' + this.dataset.carimage;
+                        document.getElementById('updateType').value = this.dataset.type;
+                        document.getElementById('updateYear').value = this.dataset.year;
+                        document.getElementById('updatePrice').value = this.dataset.price;
+                        document.getElementById('updateQuantity').value = this.dataset.quantity;
+                        document.getElementById('updateTotalPrice').value = this.dataset.totalprice;
+                        document.getElementById('updateUser').value = this.dataset.user1;
+
+                        // Show the modal
+                        new bootstrap.Modal(document.getElementById('updateCarModal')).show();
+                    });
+                });
+
+                // Handle Edit Button Click
+                $('.btn-view').on('click', function () {
+                    var $this = $(this);
+                    var carId = $this.data('id');
+                    var brand = $this.data('brand');
+                    var model = $this.data('model');
+                    var year = $this.data('year');
+                    var price = $this.data('price');
+                    var quantity = $this.data('quantity');
+                    var carImage = $this.data('carimage');
+                    var user = $this.data('user');
+
+                    // Set modal content
+                    $('#viewCarModal').find('#viewCarImage').attr('src', '/img/' + carImage);
+                    $('#viewCarModal').find('#viewCarId').text(carId);
+                    $('#viewCarModal').find('#viewBrand').text(brand);
+                    $('#viewCarModal').find('#viewModel').text(model);
+                    $('#viewCarModal').find('#viewYear').text(year);
+                    $('#viewCarModal').find('#viewPrice').text(price);
+                    $('#viewCarModal').find('#viewQuantity').text(quantity);
+                    $('#viewCarModel').find('#viewUser').text(user);
+
+                    // Show modal
+                    $('#viewCarModal').modal('show');
+                });
+
+                // Handle Add Employee Button Click
+                $('#addCategoryModal').on('show.bs.modal', function () {
+                    var form = $(this).find('form')[0];
+                    form.reset();
+                });
+            });
+
+
+            // Toggle sidebar visibility
+            $('#sidebarToggle').on('click', function() {
+                $('#sidebar').toggleClass('hidden visible');
+                $('#content').toggleClass('ml-250');
+            });
+
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const priceInput = document.getElementById('Price');
+                const quantityInput = document.getElementById('Quantity');
+                const totalPriceInput = document.getElementById('TotalPrice');
+
+                function calculateTotalPrice() {
+                    const price = parseFloat(priceInput.value) || 0;
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    const totalPrice = price * quantity;
+                    totalPriceInput.value = totalPrice.toFixed(2); // Set the total price with 2 decimal places
+                }
+
+                priceInput.addEventListener('input', calculateTotalPrice);
+                quantityInput.addEventListener('input', calculateTotalPrice);
+            });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const uPriceInput = document.getElementById('updatePrice');
+                const uQuantityInput = document.getElementById('updateQuantity');
+                const uTotalPriceInput = document.getElementById('updateTotalPrice');
+
+                function calculateTotalPrice() {
+                    const updateP = parseFloat(uPriceInput.value) || 0;
+                    const updateQ = parseInt(uQuantityInput.value) || 0;
+                    const updateT = updateP * updateQ;
+                    uTotalPriceInput.value = updateT.toFixed(2); // Set the total price with 2 decimal places
+                }
+
+                uPriceInput.addEventListener('input', calculateTotalPrice);
+                uQuantityInput.addEventListener('input', calculateTotalPrice);
+            });
+
+
+
+            function calculatePrice() {
+                var depreciationRate = 0.01; // Example: 15% depreciation per year
+
+                $('#carTable tbody tr').each(function() {
+                    var $row = $(this);
+                    var originalPrice = parseFloat($row.find('td:nth-child(6)').text()) || 0; // Price column
+                    var madeYear = parseInt($row.find('td:nth-child(5)').text()) || 0; // Made Year column
+                    var currentYear = new Date().getFullYear();
+                    var years = currentYear - madeYear;
+
+                    // Calculate current price
+                    var currentPrice = originalPrice * Math.pow((1 - depreciationRate), years);
+
+                    // Update table with current price
+                    $row.find('.current-price').text(currentPrice.toFixed(2));
+                });
+            }
+
+            // Initial calculation
+            calculatePrice();
+
+            function toggleOtherBrandInput() {
+                var brandSelect = document.getElementById("Brand");
+                var otherBrandDiv = document.getElementById("otherBrandDiv");
+                if (brandSelect.value === "Other") {
+                    otherBrandDiv.style.display = "block";
+                } else {
+                    otherBrandDiv.style.display = "none";
+                }
+            }
+
+        </script>
+</body>
+</html>

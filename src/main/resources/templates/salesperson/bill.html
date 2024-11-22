@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Bill</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+  <h2>Sale Invoice</h2>
+  <hr>
+  <h4>Sale Details</h4>
+  <p><strong>Sale ID:</strong> <span th:text="${sale.saleId}"></span></p>
+  <p><strong>Date:</strong> <span th:text="${sale.saleDate}"></span></p>
+
+  <h4>Car Details</h4>
+  <p><strong>Car Name:</strong> <span th:text="${sale.car.model}"></span></p>
+  <p><strong>Car Year:</strong> <span th:text="${sale.car.year}"></span></p>
+  <p><strong>Original Price:</strong> <span th:text="${sale.car.price}"></span></p>
+  <p><strong>Sale Price:</strong> <span th:text="${sale.salePrice}"></span></p>
+
+  <h4>Customer Details</h4>
+  <p><strong>Customer Name:</strong> <span th:text="${sale.customer.fullName}"></span></p>
+
+  <h4>Purchase Details</h4>
+  <p><strong>Quantity:</strong> <span th:text="${sale.quantity}"></span></p>
+  <p><strong>Total Sale:</strong> <span th:text="${sale.totalSale}"></span></p>
+  <p><strong>Payment Method:</strong> <span th:text="${sale.paymentMethod}"></span></p>
+
+  <hr>
+  <div class="text-right">
+    <button class="btn btn-primary" onclick="window.print()">Print Bill</button>
+  </div>
+</div>
+</body>
+</html>

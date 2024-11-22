@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Management System - DataTables</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            padding-top: 56px; /* Adjust based on navbar height */
+        }
+        .sidebar {
+            background-color: #212529;
+            color: #fff;
+            height: 100vh;
+            padding-top: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            transform: translateX(0); /* Sidebar is visible by default */
+            overflow-y: auto;
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%); /* Hide sidebar */
+        }
+        .sidebar.visible {
+            transform: translateX(0); /* Show sidebar */
+        }
+        .sidebar a {
+            color: #adb5bd;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            color: #fff;
+            background-color: #343a40;
+        }
+        .main-content {
+            margin-left: 250px; /* Sidebar width */
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            height: 300px;
+        }
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 250px; /* Sidebar width */
+            width: calc(100% - 250px);
+            z-index: 1020;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            transition: left 0.3s ease, width 0.3s ease;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .navbar-brand-full {
+            display: inline;
+        }
+        .navbar-brand-short {
+            display: none;
+        }
+        .navbar-nav {
+            flex-direction: row;
+            align-items: center;
+        }
+        .navbar-nav .nav-item {
+            margin-left: auto;
+        }
+        .navbar .toggle-icon {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                transform: translateX(-100%); /* Hide sidebar initially */
+            }
+            .sidebar.visible {
+                transform: translateX(0); /* Show sidebar */
+            }
+            .main-content {
+                margin-left: 0; /* Adjust content area */
+            }
+            .navbar {
+                width: 100%; /* Full width on small screens */
+                left: 0;
+            }
+            .navbar .toggle-icon {
+                display: inline-block;
+            }
+            .navbar .navbar-brand-full {
+                display: none;
+            }
+            .navbar .navbar-brand-short {
+                display: inline;
+            }
+        }
+        @media (max-width: 576px) {
+            .dropdown-menu {
+                display: none; /* Hide dropdown menu items */
+            }
+            .dropdown-icon {
+                display: inline-block;
+            }
+        }
+        footer {
+            background-color: #f8f9fa; /* Light background */
+            color: #212529; /* Dark text */
+        }
+        footer a {
+            color: #212529;
+            text-decoration: none;
+        }
+        footer a:hover {
+            color: #007bff; /* Change color on hover */
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <!-- Include Sidebar Fragment -->
+    <th:block th:include="salesperson/fragments/sidebar"></th:block>
+
+    <!-- Main content -->
+    <div id="content" class="main-content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand navbar-brand-full" href="#">Car Management System</a>
+                <a class="navbar-brand navbar-brand-short" href="#">CM-SYSTEM</a>
+                <button id="sidebarToggle" class="btn btn-outline-secondary d-lg-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="d-flex ms-auto">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+
+                            <span class="d-none d-sm-inline" th:text="${user.username}"></span>
+                            <i class="fas fa-user d-sm-none"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                            <li><a class="dropdown-item" href="#">Profile</a></li>
+                            <li><a class="dropdown-item" href="#">Settings</a></li>
+                            <li><a class="dropdown-item" th:href="@{/logout}">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid">
+            <h1 class="mt-4">Sale Person Dashboard</h1>
+
+
+
+            <!-- Add Employee Button -->
+            <div class="d-flex justify-content-between mb-3">
+                <h5 class="card-title">Customer Data</h5>
+                <a href="#" class="btn btn-success" title="Add Customer" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                    <i class="fas fa-plus-circle"></i> Add Customer
+                </a>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <!-- Your DataTable -->
+                    <table id="carTable" class="display">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fullname</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Options</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- Your existing table rows -->
+                        <tr th:each="customers,stat:${customer}">
+                            <td th:text="${stat.index+1}"></td>
+                            <td th:text="${customers.fullName}"></td>
+                            <td th:text="${customers.email}">LastName</td>
+                            <td th:text="${customers.address}"></td>
+                            <td>
+                                <a href="#" class="btn btn-warning btn-sm btn-sell"
+                                   title="Sell"
+                                   data-bs-toggle="modal"
+                                   data-bs-target="#addSaleModal"
+                                   th:data-id="${customers.customerId}"
+                                   th:data-name="${customers.fullName}"
+
+                                >
+                                    <i class="fas fa-tags"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <!-- Additional rows as needed -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <!-- Add Customer Modal -->
+   <!-- Modal for Sale -->
+    <div class="modal fade" id="addSaleModal" tabindex="-1" aria-labelledby="addSaleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addSaleModalLabel">Add Sale</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form th:action="@{/salesperson/save}" method="post">
+                        <div class="mb-3">
+                            <div class="row">
+                                <!-- Car Selection -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="car" class="form-label">Car Name</label>
+                                    <input type="text" step="0.01" th:value="${car.model}" class="form-control" id="nameCar" name="nameCar" placeholder="Enter car name" readonly>
+                                    <input type="hidden" step="0.01" th:value="${car.carId}" class="form-control" id="car" name="car" placeholder="Enter car name" readonly>
+
+                                </div>
+                                <!-- Customer Selection -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="viewCustomerId" class="form-label">Customer Name</label>
+                                    <input type="text" class="form-control" id="viewCustomerName" name="customerName" readonly>
+                                    <input type="hidden" class="form-control" id="viewCustomerId" name="customer" readonly>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <!-- Sale Date -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="saleDate" class="form-label">Sale Date</label>
+                                    <input type="date" class="form-control" id="saleDate" name="saleDate" readonly>
+                                </div>
+                                <!-- Car Year -->
+                                <!-- Car Year -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="carYear" class="form-label">Car Year</label>
+                                    <input type="number" class="form-control" id="carYear" th:value="${car.year}" name="carYear" placeholder="Enter car year" readonly>
+                                </div>
+
+                                <!-- Car Price -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="carPrice" class="form-label">Original Price</label>
+                                    <input type="number" step="0.01" class="form-control" id="carPrice" th:value="${car.price}" name="carPrice" placeholder="Enter original price" readonly>
+                                </div>
+
+                                <!-- Current Price -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="currentPrice" class="form-label">Current Price</label>
+                                    <input type="number" step="0.01" class="form-control" id="currentPrice" name="salePrice" placeholder="Calculated current price" readonly>
+                                </div>
+
+                            </div>
+
+                            <div class="row">
+                                <!-- Quantity -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="quantity" class="form-label">
+                                        Quantity <br>
+                                        The available quantity is <span id="availableQuantity" th:text="${car.quantity}"></span>.
+                                        <input type="hidden" th:value="${car.quantity}" name="quantityy">
+                                    </label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" placeholder="Enter quantity" required>
+                                    <div id="quantityError" class="text-danger" style="display: none;">Entered quantity exceeds available quantity.</div>
+                                </div>
+                                <!-- Total Sale -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="totalSale" class="form-label">Total Sale</label>
+                                    <input type="number" step="0.01" class="form-control" id="totalSale" name="totalSale" placeholder="Enter total sale amount" readonly>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <!-- Payment Method -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="paymentMethod" class="form-label">Payment Method</label>
+                                    <select class="form-select" id="paymentMethod" name="paymentMethod" required>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Credit Card">Credit Card</option>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                        <!-- Add other payment methods as needed -->
+                                    </select>
+                                </div>
+                                <!-- User Selection (Optional) -->
+                                <div class="col-md-6 mb-3">
+                                    <input type="hidden" name="user" th:value="${userId.userId}" value="logged-in-user-id"> <!-- Set the logged-in user ID dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" id="saveButton" class="btn btn-primary">Save Sale</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Add more stat cards here -->
+</div>
+
+
+<!-- JavaScript Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+
+
+
+
+
+    <script>
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var quantityInput = document.getElementById('quantity');
+            var availableQuantity = parseInt(document.getElementById('availableQuantity').textContent);
+            var quantityError = document.getElementById('quantityError');
+            var saveButton = document.getElementById('saveButton');
+
+            quantityInput.addEventListener('input', function() {
+                var enteredQuantity = parseInt(quantityInput.value);
+
+                if (enteredQuantity > availableQuantity || enteredQuantity <= 0) {
+                    quantityError.style.display = 'block';
+                    quantityInput.classList.add('is-invalid');
+                    saveButton.disabled = true; // Disable the save button
+                } else {
+                    quantityError.style.display = 'none';
+                    quantityInput.classList.remove('is-invalid');
+                    saveButton.disabled = false; // Enable the save button
+                }
+            });
+        });
+
+
+
+        $(document).ready(function () {
+            // Function to calculate current price
+            $(document).ready(function () {
+
+
+                var sellButtons = document.querySelectorAll('.btn-sell');
+                sellButtons.forEach(function(button) {
+                    button.addEventListener('click', function() {
+                        var fullName = this.getAttribute('data-name')
+                        var customerId = this.getAttribute('data-id');
+                        document.getElementById('viewCustomerName').value= fullName;
+                        document.getElementById('viewCustomerId').value = customerId;
+                    });
+                });
+
+                var addSaleModal = document.getElementById('addSaleModal');
+                addSaleModal.addEventListener('shown.bs.modal', function () {
+                    var today = new Date().toISOString().split('T')[0];
+                    document.getElementById('saleDate').value = today;
+                });
+
+                // Function to calculate current price
+                function calculateCurrentPrice() {
+                    // Retrieve values
+                    var carYear = parseInt($('#carYear').val(), 10);
+                    var originalPrice = parseFloat($('#carPrice').val());
+
+                    // Validate inputs
+                    if (isNaN(carYear) || isNaN(originalPrice) || carYear <= 0 || originalPrice <= 0) {
+                        $('#currentPrice').val('');
+                        console.log('Invalid input: Car year or original price is not valid.');
+                        return;
+                    }
+
+                    // Get the current year
+                    var currentYear = new Date().getFullYear();
+                    var carAge = currentYear - carYear;
+
+                    // Check if car age is valid
+                    if (carAge < 0) {
+                        $('#currentPrice').val('');
+                        console.log('Invalid input: Car year is in the future.');
+                        return;
+                    }
+
+                    // Calculate depreciation
+                    var depreciationRate = 0.01;
+                    var currentPrice = originalPrice * Math.pow((1 - depreciationRate), carAge);
+
+                    // Set calculated current price
+                    $('#currentPrice').val(currentPrice.toFixed(2));
+                    console.log('Current Price Calculated: ', currentPrice.toFixed(2));
+                }
+
+
+                // Function to calculate total sale
+                function calculateTotalSale() {
+                    // Retrieve values
+                    var currentPrice = parseFloat($('#currentPrice').val());
+                    var quantity = parseInt($('#quantity').val(), 10);
+
+                    // Validate inputs
+                    if (isNaN(currentPrice) || isNaN(quantity) || quantity <= 0) {
+                        $('#totalSale').val('');
+                        console.log('Invalid input: Current price or quantity is not valid.');
+                        return;
+                    }
+
+                    // Calculate total sale
+                    var totalSale = currentPrice * quantity;
+
+                    // Set calculated total sale
+                    $('#totalSale').val(totalSale.toFixed(2));
+                    console.log('Total Sale Calculated: ', totalSale.toFixed(2));
+                }
+
+                // Bind calculation to input changes
+                $('#currentPrice, #quantity').on('input', function () {
+                    calculateTotalSale();
+                });
+                // Bind calculation to input changes
+                $('#carYear, #carPrice').on('input', function () {
+                    calculateCurrentPrice();
+                });
+
+                // Initial calculation if inputs are pre-filled
+                calculateCurrentPrice();
+            });
+            // Initialize other elements if needed
+            $('#carTable').DataTable();
+
+            // Handle Edit Button Click
+
+            // Handle Add Employee Button Click
+            $('#addEmployeeModal').on('show.bs.modal', function () {
+                var form = $(this).find('form')[0];
+                form.reset();
+            });
+
+            // Toggle sidebar visibility
+            $('#sidebarToggle').on('click', function() {
+                $('#sidebar').toggleClass('hidden visible');
+                $('#content').toggleClass('ml-250');
+            });
+        });
+</script>
+
+</script>
+
+
+</body>
+</html>
